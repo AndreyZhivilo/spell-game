@@ -1,6 +1,16 @@
 import { MutableRefObject } from 'react';
 
+export interface IPlayerConfig {
+  id: number;
+  heroSpeed: number;
+  x: number;
+  y: number;
+  color: string;
+  direction: 'up' | 'down';
+}
+
 export interface IHero {
+  id: number;
   x: number;
   y: number;
   radius: number;

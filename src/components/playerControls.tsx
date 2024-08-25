@@ -4,8 +4,8 @@ import { Slider } from "./ui/slider.tsx"
 
 export function PlayerControls({
     speed,
-    setSpeed,
     shootInterval,
+    setSpeed,
     setShootInterval
 }: {
     speed: number

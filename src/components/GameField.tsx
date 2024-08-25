@@ -6,35 +6,26 @@ import type { IHero, IMousePosition } from '../types/index.ts';
 import { FIELD_WIDTH, FIELD_HEIGHT, BULLET_SPEED, COLORS } from '../lib/constants.ts'
 import { useBullets } from '../hooks/useBullets.ts';
 import { PickSpellColor } from './PickSpellColor.tsx';
+import { player1Config, player2Config } from '../config/index.ts'
+import { countDistance } from '../lib/utils.ts';
+import { Button } from './ui/button.tsx';
 
 
 
 export function GameField() {
+  const [gameStarted, setGameStarted] = useState(false)
+  const [fereeze, setFreeze] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false)
+  const [activePlayer, setActivePlayer] = useState(0)
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const mousePosition = useRef<IMousePosition>({ x: 0, y: 0 });
   const mouseClick = useRef<IMousePosition>({ x: 0, y: 0 })
-  const [fereeze, setFreeze] = useState(false);
   const timeRef = useRef(0)
-  const [modalOpen, setModalOpen] = useState(false)
-  const [activePlayer, setActivePlayer] = useState(0)
 
-  const hero1 = useHero({
-    heroSpeed: 2,
-    x: FIELD_WIDTH / 3,
-    y: FIELD_HEIGHT / 2,
-    color: 'red',
-    direction: 'up',
-  });
-
-  const hero2 = useHero({
-    heroSpeed: 2,
-    x: (2 * FIELD_WIDTH) / 3,
-    y: FIELD_HEIGHT / 2,
-    color: 'blue',
-    direction: 'down',
-  });
-  // Параметры кругов
-  const circles: IHero[] = [hero1, hero2];
+  // Создаем героев и заклинания
+  const hero1 = useHero(player1Config);
+  const hero2 = useHero(player2Config);
+  const heros: IHero[] = [hero1, hero2];
   const bullets = useBullets()
 
   useEffect(() => {
@@ -48,71 +39,72 @@ export function GameField() {
 
 
     const draw = (time: number) => {
-      // console.log('click', mouseClick.current)
 
       ctx.clearRect(0, 0, FIELD_WIDTH, FIELD_HEIGHT);
 
       // Отрисовка и обновление кругов
-      circles.forEach((circle, index) => {
+      heros.forEach((hero, index) => {
         ctx.beginPath();
         ctx.arc(
-          circle.position.x,
-          circle.position.y,
-          circle.radius,
+          hero.position.x,
+          hero.position.y,
+          hero.radius,
           0,
           Math.PI * 2
         );
-        ctx.fillStyle = circle.color;
+        ctx.fillStyle = hero.color;
         ctx.fill();
         ctx.closePath();
 
-        // Вертикальное движение круга
-        if (circle.position.direction === 'up') {
-          circle.position.y += circle.dy;
+        // Вертикальное движение героя
+        if (hero.position.direction === 'up') {
+          hero.position.y += hero.dy;
         } else {
-          circle.position.y -= circle.dy;
+          hero.position.y -= hero.dy;
         }
 
         // Отскок от верхней и нижней границ
         if (
-          circle.position.y + circle.radius > FIELD_HEIGHT ||
-          circle.position.y - circle.radius < 0
+          hero.position.y + hero.radius > FIELD_HEIGHT ||
+          hero.position.y - hero.radius < 0
         ) {
-          circle.changeDirection()
+          hero.changeDirection()
 
         }
         // Отскакивание от курсора
-        const dx = circle.position.x - mousePosition.current.x;
-        const dy = circle.position.y - mousePosition.current.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
+        const distance = countDistance(
+          hero.position.x,
+          mousePosition.current.x,
+          hero.position.y,
+          mousePosition.current.y)
 
-        if (distance < circle.radius + 20) {
-          circle.changeDirection()
+        if (distance < hero.radius + 20) {
+          hero.changeDirection()
         }
 
         // Стрельба
-        if (time - circle.lastShotTime.current > circle.shootInterval) {
-          const target = circles[(index + 1) % 2];
+        if (time - hero.lastShotTime.current > hero.shootInterval) {
+          const target = heros[(index + 1) % 2];
           const angle = Math.atan2(
-            target.position.y - circle.position.y,
-            target.position.x - circle.position.x
+            target.position.y - hero.position.y,
+            target.position.x - hero.position.x
           );
           bullets.current.push({
-            x: circle.position.x,
-            y: circle.position.y,
+            x: hero.position.x,
+            y: hero.position.y,
             radius: 5,
             dx: Math.cos(angle) * BULLET_SPEED,
-            color: circle.bulletColor,
+            color: hero.bulletColor,
             shooterId: index,
           });
-          circle.lastShotTime.current = time;
+          hero.lastShotTime.current = time;
         }
         // Проверяем клик
-        const dxClick = circle.position.x - mouseClick.current.x;
-        const dyClick = circle.position.y - mouseClick.current.y;
+        const dxClick = hero.position.x - mouseClick.current.x;
+        const dyClick = hero.position.y - mouseClick.current.y;
         const clickDistance = Math.sqrt(dxClick * dxClick + dyClick * dyClick);
 
-        if (clickDistance < circle.radius) {
+        if (clickDistance < hero.radius) {
 
           setFreeze(true)
           mouseClick.current.x = 0
@@ -126,7 +118,7 @@ export function GameField() {
 
 
 
-      // Отрисовка и обновление пуль
+      // Отрисовка и обновление заклинаний
       bullets.current = bullets.current.filter((bullet) => {
         ctx.beginPath();
         ctx.arc(bullet.x, bullet.y, bullet.radius, 0, Math.PI * 2);
@@ -138,10 +130,9 @@ export function GameField() {
 
         // Проверка попадания
         const targetIndex = (bullet.shooterId + 1) % 2;
-        const target = circles[targetIndex];
-        const dx = bullet.x - target.position.x;
-        const dy = bullet.y - target.position.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
+        const target = heros[targetIndex];
+        const distance = countDistance(bullet.x, target.position.x, bullet.y, target.position.y)
+
 
         if (distance < target.radius + bullet.radius) {
           if (bullet.shooterId === 0) {
@@ -149,10 +140,10 @@ export function GameField() {
           } else {
             hero2.setScore((prevScore) => prevScore + 1);
           }
-          return false; // Удаляем пулю при попадании
+          return false; // Удаляем заклинание при попадании
         }
 
-        // Удаление пуль, вышедших за пределы холста
+        // Удаление заклинаний, вышедших за пределы холста
         return bullet.x > 0 && bullet.x < FIELD_WIDTH;
       });
       if (!fereeze) {
@@ -195,14 +186,22 @@ export function GameField() {
     hero1.shootInterval,
     hero2.shootInterval,
     hero1.bulletColor,
-    hero2.bulletColor
+    hero2.bulletColor,
+    gameStarted
   ]);
-
+  if (!gameStarted) return (
+    <div className="w-full h-full flex items-center justify-center">
+      <Button onClick={() => setGameStarted(true)} variant="destructive" size='lg'>Начинаем игру!</Button>
+    </div>
+  )
   return (
     <div>
       <div className="grid grid-cols-2 gap-4 mb-5">
-        <HitCount count={hero1.score} />
-        <HitCount count={hero2.score} />
+        {heros.map(hero => {
+          return (
+            <HitCount count={hero.score} key={hero.id} />
+          )
+        })}
       </div>
       <canvas
         ref={canvasRef}
@@ -212,29 +211,26 @@ export function GameField() {
       />
 
       <div className="grid grid-cols-2 gap-5">
-
-        <PlayerControls
-          speed={hero1.speed}
-          setSpeed={hero1.setSpeed}
-          setShootInterval={hero1.setShootInterval}
-          shootInterval={hero1.shootInterval}
-        />
-        <PlayerControls
-          speed={hero2.speed}
-          setSpeed={hero2.setSpeed}
-          setShootInterval={hero2.setShootInterval}
-          shootInterval={hero2.shootInterval}
-        />
+        {heros.map(hero => {
+          return (
+            <PlayerControls
+              speed={hero.speed}
+              setSpeed={hero.setSpeed}
+              setShootInterval={hero.setShootInterval}
+              shootInterval={hero.shootInterval}
+              key={hero.id}
+            />)
+        })}
       </div>
       <PickSpellColor
-        open={modalOpen}
+        isOpen={modalOpen}
         items={COLORS}
         onClose={() => {
           setModalOpen(false)
           setFreeze(false)
         }}
-        current={circles[activePlayer].bulletColor}
-        onSelect={(e) => circles[activePlayer].setBulletColor(e)}
+        current={heros[activePlayer].bulletColor}
+        onSelect={(e) => heros[activePlayer].setBulletColor(e)}
       />
     </div>
   );

@@ -1,20 +1,15 @@
 import { useState, useRef } from 'react';
-import { IHero } from '../types/index.ts';
+import type { IHero, IPlayerConfig } from '../types/index.ts';
 import { throttle } from '../lib/utils.ts';
 
 export function useHero({
+  id,
   heroSpeed,
   x,
   y,
   color,
   direction,
-}: {
-  heroSpeed: number;
-  x: number;
-  y: number;
-  color: string;
-  direction: 'up' | 'down';
-}): IHero {
+}: IPlayerConfig): IHero {
   const [shootInterval, setShootInterval] = useState(1000);
   const [speed, setSpeed] = useState(heroSpeed);
   const [bulletColor, setBulletColor] = useState(color);
@@ -25,7 +20,9 @@ export function useHero({
     position.current.direction =
       position.current.direction === 'up' ? 'down' : 'up';
   }, 300);
+
   return {
+    id,
     x,
     y,
     radius: 20,
