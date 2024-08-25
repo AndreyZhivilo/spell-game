@@ -1,13 +1,9 @@
-import { useState } from 'react';
+import { GameField } from './components/GameField.tsx';
 
 function App() {
-  const [count, setCount] = useState(0);
-  const some = 'sadfsdf';
-  const otea = 'sdfasdfsdfasd';
-  const asdfas = 'sdfasd';
   return (
-    <div className="w-10 h-10 bg-red-300">
-      <span>sadfasdf</span>
+    <div className="container pt-10">
+      <GameField />
     </div>
   );
 }
